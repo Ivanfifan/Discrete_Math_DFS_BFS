@@ -2,6 +2,8 @@ import random
 import networkx as nx  # Бібліотека для роботи з графами
 import matplotlib.pyplot as plt  # Бібліотека для малювання
 
+# створив гілку тест
+# перед пушом в мастер воркаємо тута
 
 class Graph:
     def __init__(self, n):
