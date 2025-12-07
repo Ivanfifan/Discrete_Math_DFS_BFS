@@ -174,21 +174,45 @@ def measure_time(graph, iterations=100):
         start = time.perf_counter(); graph.bfs_using_matrix(); end=time.perf_counter(); results["bfs_matrix"] += end-start
     for key in results: results[key] /= iterations
     return results
-# Основний цикл для перевірок і TSV
-nodes_list = [10, 20, 50, 80, 110, 140, 170, 200]
-densities = [15, 100]
+nodes_list = [20, 40, 60, 80, 100, 120, 140, 160]
+densities = [0.1, 0.3, 0.5, 0.7, 0.9]
 iterations = 100
 with open("results.tsv","w",newline='') as tsvfile:
     writer = csv.DictWriter(tsvfile, fieldnames=["method","representation","nodes","density","average_time_sec"], delimiter='\t')
     writer.writeheader()
     for n in nodes_list:
         for d in densities:
-            g = Graph.random_graph_erdos_renyi(n,d)
-            avg_times = measure_time(g, iterations=iterations)
-            writer.writerow({"method":"BFS","representation":"list","nodes":n,"density":d,"average_time_sec":avg_times["bfs_list"]})
-            writer.writerow({"method":"BFS","representation":"matrix","nodes":n,"density":d,"average_time_sec":avg_times["bfs_matrix"]})
-            writer.writerow({"method":"DFS","representation":"list","nodes":n,"density":d,"average_time_sec":avg_times["dfs_list"]})
-            writer.writerow({"method":"DFS","representation":"matrix","nodes":n,"density":d,"average_time_sec":avg_times["dfs_matrix"]})
+            total_times = {"dfs_list": 0.0, "dfs_matrix": 0.0, "bfs_list": 0.0, "bfs_matrix": 0.0}
+            for _ in range(iterations):
+                g = Graph.random_graph_erdos_renyi(n, d)
+                start = time.perf_counter();
+                g.dfs_using_list();
+                end = time.perf_counter();
+                total_times["dfs_list"] += end - start
+                start = time.perf_counter();
+                g.dfs_using_matrix();
+                end = time.perf_counter();
+                total_times["dfs_matrix"] += end - start
+                start = time.perf_counter();
+                g.bfs_using_list();
+                end = time.perf_counter();
+                total_times["bfs_list"] += end - start
+                start = time.perf_counter();
+                g.bfs_using_matrix();
+                end = time.perf_counter();
+                total_times["bfs_matrix"] += end - start
+            avg_time = total_times["bfs_list"] / iterations
+            writer.writerow(
+                {"method": "BFS", "representation": "list", "nodes": n, "density": d, "average_time_sec": avg_time})
+            avg_time = total_times["bfs_matrix"] / iterations
+            writer.writerow(
+                {"method": "BFS", "representation": "matrix", "nodes": n, "density": d, "average_time_sec": avg_time})
+            avg_time = total_times["dfs_list"] / iterations
+            writer.writerow(
+                {"method": "DFS", "representation": "list", "nodes": n, "density": d, "average_time_sec": avg_time})
+            avg_time = total_times["dfs_matrix"] / iterations
+            writer.writerow(
+                {"method": "DFS", "representation": "matrix", "nodes": n, "density": d, "average_time_sec": avg_time})
 print("Файл results.tsv створено!")
 # --- ЗАПУСК ---
 
