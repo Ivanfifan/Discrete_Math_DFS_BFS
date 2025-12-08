@@ -1,8 +1,9 @@
 import random
 import time
+import csv
 from collections import deque
-import networkx as nx  # Бібліотека для роботи з графами
-import matplotlib.pyplot as plt  # Бібліотека для малювання
+from tqdm import tqdm
+
 
 # -------------------------------
 # Клас графа
@@ -23,6 +24,9 @@ class Graph:
             self.adj_matrix.append(row)
 
     def add_edge(self, u, v): # Додає неорієнтоване ребро між вершинами u та v
+        if u == v:
+            return
+
         if v not in self.adj_list[u]:
             self.adj_list[u].append(v)
             self.adj_list[v].append(u)
@@ -132,95 +136,47 @@ class Graph:
                     g.add_edge(i, j)
         return g
 
-    # --- НОВА ФУНКЦІЯ ДЛЯ ВІЗУАЛІЗАЦІЇ ---
-    def visualize(self):
-        # 1. Створюємо об'єкт графа бібліотеки NetworkX
-        nx_graph = nx.Graph()
-
-        # 2. Переносимо дані з вашого списку суміжності в NetworkX
-        for u in self.adj_list:
-            nx_graph.add_node(u)  # Додаємо вершину
-            for v in self.adj_list[u]:
-                nx_graph.add_edge(u, v)  # Додаємо ребро
-
-        # 3. Налаштовуємо малювання
-        plt.figure(figsize=(8, 6))  # Розмір картинки
-
-        # Вибираємо красиве розташування точок (пружинна модель)
-        pos = nx.spring_layout(nx_graph)
-
-        # Малюємо сам граф
-        nx.draw(nx_graph, pos,
-                with_labels=True,  # Показати номери вершин
-                node_color='lightblue',  # Колір кружечків
-                edge_color='gray',  # Колір ліній
-                node_size=500,  # Розмір кружечків
-                font_weight='bold')  # Жирний шрифт
-
-        plt.title("Мій випадковий граф")
-        plt.show()
-
 def print_matrix(matrix):
     print("Матриця досяжності:")
     for row in matrix:
         print(row)
 # Функція для вимірювання часу
-def measure_time(graph, iterations=100):
-    results = {"dfs_list":0,"dfs_matrix":0,"bfs_list":0,"bfs_matrix":0}
-    for _ in range(iterations):
-        start = time.perf_counter(); graph.dfs_using_list(); end=time.perf_counter(); results["dfs_list"] += end-start
-        start = time.perf_counter(); graph.dfs_using_matrix(); end=time.perf_counter(); results["dfs_matrix"] += end-start
-        start = time.perf_counter(); graph.bfs_using_list(); end=time.perf_counter(); results["bfs_list"] += end-start
-        start = time.perf_counter(); graph.bfs_using_matrix(); end=time.perf_counter(); results["bfs_matrix"] += end-start
-    for key in results: results[key] /= iterations
-    return results
-nodes_list = [20, 40, 60, 80, 100, 120, 140, 160]
-densities = [0.1, 0.3, 0.5, 0.7, 0.9]
-iterations = 100
-with open("results.tsv","w",newline='') as tsvfile:
-    writer = csv.DictWriter(tsvfile, fieldnames=["method","representation","nodes","density","average_time_sec"], delimiter='\t')
+nodes_list = [20, 40, 60, 80, 100, 120, 140, 160, 180, 200]
+densities = [ 0.1, 0.3, 0.5, 0.7, 0.9]
+iterations = 50
+total_steps = len(nodes_list) * len(densities) * iterations
+with open("results.tsv", "w", newline='') as tsvfile:
+    writer = csv.DictWriter(tsvfile, fieldnames=["method", "representation", "nodes", "density", "average_time_sec"], delimiter='\t')
     writer.writeheader()
-    for n in nodes_list:
-        for d in densities:
-            total_times = {"dfs_list": 0.0, "dfs_matrix": 0.0, "bfs_list": 0.0, "bfs_matrix": 0.0}
-            for _ in range(iterations):
-                g = Graph.random_graph_erdos_renyi(n, d)
-                start = time.perf_counter();
-                g.dfs_using_list();
-                end = time.perf_counter();
-                total_times["dfs_list"] += end - start
-                start = time.perf_counter();
-                g.dfs_using_matrix();
-                end = time.perf_counter();
-                total_times["dfs_matrix"] += end - start
-                start = time.perf_counter();
-                g.bfs_using_list();
-                end = time.perf_counter();
-                total_times["bfs_list"] += end - start
-                start = time.perf_counter();
-                g.bfs_using_matrix();
-                end = time.perf_counter();
-                total_times["bfs_matrix"] += end - start
-            avg_time = total_times["bfs_list"] / iterations
-            writer.writerow(
-                {"method": "BFS", "representation": "list", "nodes": n, "density": d, "average_time_sec": avg_time})
-            avg_time = total_times["bfs_matrix"] / iterations
-            writer.writerow(
-                {"method": "BFS", "representation": "matrix", "nodes": n, "density": d, "average_time_sec": avg_time})
-            avg_time = total_times["dfs_list"] / iterations
-            writer.writerow(
-                {"method": "DFS", "representation": "list", "nodes": n, "density": d, "average_time_sec": avg_time})
-            avg_time = total_times["dfs_matrix"] / iterations
-            writer.writerow(
-                {"method": "DFS", "representation": "matrix", "nodes": n, "density": d, "average_time_sec": avg_time})
+
+    with tqdm(total=total_steps, desc="Processing all experiments", ncols=80) as pbar:
+
+        for n in nodes_list:
+            for d in densities:
+                total_times = {"dfs_list": 0.0, "dfs_matrix": 0.0, "bfs_list": 0.0, "bfs_matrix": 0.0}
+
+                for _ in range(iterations):
+
+                    g = Graph.random_graph_erdos_renyi(n, d)
+
+                    start = time.perf_counter(); g.dfs_using_list();   end = time.perf_counter(); total_times["dfs_list"]   += end - start
+                    start = time.perf_counter(); g.dfs_using_matrix(); end = time.perf_counter(); total_times["dfs_matrix"] += end - start
+                    start = time.perf_counter(); g.bfs_using_list();   end = time.perf_counter(); total_times["bfs_list"]   += end - start
+                    start = time.perf_counter(); g.bfs_using_matrix(); end = time.perf_counter(); total_times["bfs_matrix"] += end - start
+
+                    pbar.update(1)
+
+                writer.writerow({"method": "BFS", "representation": "list",   "nodes": n, "density": d, "average_time_sec": total_times["bfs_list"]/iterations})
+                writer.writerow({"method": "BFS", "representation": "matrix", "nodes": n, "density": d, "average_time_sec": total_times["bfs_matrix"]/iterations})
+                writer.writerow({"method": "DFS", "representation": "list",   "nodes": n, "density": d, "average_time_sec": total_times["dfs_list"]/iterations})
+                writer.writerow({"method": "DFS", "representation": "matrix", "nodes": n, "density": d, "average_time_sec": total_times["dfs_matrix"]/iterations})
+
 print("Файл results.tsv створено!")
-# --- ЗАПУСК ---
 
-# Рекомендую брати менше вершин для малювання (наприклад, 10-15),
-# бо 100 вершин перетворяться на "кашу".
-g = Graph.random_graph_erdos_renyi(10, 0.2)
+def self_test():
+    g = Graph.random_graph_erdos_renyi(100, 0.5)
+    assert g.dfs_using_list() == g.dfs_using_matrix()
+    assert g.bfs_using_list() == g.bfs_using_matrix()
+    print("Коректність перевірена: OK")
 
-print_matrix(g.bfs_using_list())
-print_matrix(g.dfs_using_matrix())
-# Дивимось картинку
-g.visualize()
+self_test()
